@@ -69,9 +69,8 @@ final public  class Action<Input, Output, Failure: Error> {
 
     inputs
       .withLatestFrom(isEnabled) { ($0, $1) }
-      .filter { $0.1 }
-      .map { $0.0 }
-      .sink { [unowned self] input in
+      .sink { [unowned self] input, isEnabled in
+        guard isEnabled else { return errorsSubject.send(.notEnabled) }
         execute(input: input)
       }
       .store(in: &subscriptions)
@@ -90,6 +89,8 @@ final public  class Action<Input, Output, Failure: Error> {
       .sink(
         receiveCompletion: { [unowned self] completion in
           isExecutingSubject.send(false)
+          guard case let .failure(error) = completion else { return }
+          errorsSubject.send(.actionError(error))
         },
         receiveValue: { [unowned self] value in
           elementsSubject.send(value)
