@@ -20,10 +20,10 @@ public enum ActionError<Failure: Error>: Error {
 final public  class Action<Input, Output, Failure: Error> {
   public typealias WorkFactory = (Input) -> AnyPublisher<Output, Failure>
 
-  public let inputs: PassthroughSubject<Input, Never> = .init()
-  public let cancellations: PassthroughSubject<Void, Never> = .init()
-  public let elements: AnyPublisher<Output, Never>
-  public let errors: AnyPublisher<ActionError<Failure>, Never>
+  public let input: PassthroughSubject<Input, Never> = .init()
+  public let cancellation: PassthroughSubject<Void, Never> = .init()
+  public let output: AnyPublisher<Output, Never>
+  public let error: AnyPublisher<ActionError<Failure>, Never>
   public let isExecuting: AnyPublisher<Bool, Never>
   public let isEnabled: AnyPublisher<Bool, Never>
 
@@ -45,11 +45,11 @@ final public  class Action<Input, Output, Failure: Error> {
     self.enableCondition = enableCondition
     self.workFactory = workFactory
 
-    elements = elementsSubject
+    output = elementsSubject
       .share(replay: 1)
       .eraseToAnyPublisher()
 
-    errors = errorsSubject
+    error = errorsSubject
       .eraseToAnyPublisher()
 
     isExecuting = isExecutingSubject
@@ -67,7 +67,7 @@ final public  class Action<Input, Output, Failure: Error> {
       .subscribe(isEnabledSubject)
       .store(in: &subscriptions)
 
-    inputs
+    input
       .withLatestFrom(isEnabled) { ($0, $1) }
       .sink { [unowned self] input, isEnabled in
         guard isEnabled else { return errorsSubject.send(.notEnabled) }
@@ -75,7 +75,7 @@ final public  class Action<Input, Output, Failure: Error> {
       }
       .store(in: &subscriptions)
 
-    cancellations
+    cancellation
       .sink { [unowned self] input in
         cancel()
       }
@@ -104,6 +104,6 @@ final public  class Action<Input, Output, Failure: Error> {
   }
 
   public func execute(_ value: Input) {
-    inputs.send(value)
+    input.send(value)
   }
 }
