@@ -107,3 +107,9 @@ final public  class Action<Input, Output, Failure: Error> {
     input.send(value)
   }
 }
+
+public extension CombineAction.Action where Input == Void {
+  func execute() {
+    execute(())
+  }
+}
